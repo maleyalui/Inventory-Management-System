@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
 import requests
+import re
 
 app = Flask(__name__)
 
@@ -49,20 +50,20 @@ def fetch_product_details(barcode=None, product_name=None):
             "search_terms": product_name,
             "search_simple": 1,
             "json": 1,
-            "page_size": 1
+            "page_size": 3
         }
         try:
             resp = requests.get(url, params=params, timeout=5)
             if resp.status_code == 200:
                 data = resp.json()
-                products = data.get("products, []")
-                if products:
-                    p = products[0]
-                    return {
-                        "product_name": p.get("product_name"),
-                        "brands": p.get("brands"),
-                        "ingredients_text": p.get("ingredients_text")
-                    }
+                products = data.get("products", [])
+                for p in products:
+                    if p.get("product_name"):
+                        return{
+                            "product_name": p.get("product_name"),
+                            "brands": p.get("brands"),
+                            "ingredients_text": p.get("ingredients_text")
+                        }
                     
         except:
             return None
@@ -120,6 +121,12 @@ def update_item(item_id):
         return jsonify({"error": "Item not found"}), 404
     
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data found"}), 400
+    
+    if 'product_name' in data:
+        item['product_name'] = data['product_name']
+    
     if 'stock' in data:
         item['stock'] = int(data['stock'])
     if 'price' in data:
